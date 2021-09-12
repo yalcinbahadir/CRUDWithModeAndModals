@@ -1,0 +1,172 @@
+﻿<TelerikWindow @bind-Visible="@IsVisible" Width="70%">
+    <WindowTitle>
+        <strong>@Title</strong>
+    </WindowTitle>
+    <WindowContent>
+        @if (ModalMode == ModalMode.Delete)
+        {
+            <TelerikGrid Data="SelectedStudents" AutoGenerateColumns="true">
+                <GridColumns></GridColumns>
+            </TelerikGrid>
+            <div class="mt-2">
+                <TelerikButton OnClick="Delete" Primary="true">Delete</TelerikButton>
+                <TelerikButton OnClick="Cancel" Class="ml-2">Cancel</TelerikButton>
+            </div>
+
+        }
+        else
+        {
+    <EditForm EditContext="_editContext" OnValidSubmit="HandelValidSubmit">
+        <TelerikValidationSummary></TelerikValidationSummary>
+        @if (ModalMode == ModalMode.Update)
+        {
+            <div class="form-group row">
+                <label for="id" class="col-3">Id</label>
+                <TelerikNumericTextBox Id="id" Enabled="false" Class="col-5" @bind-Value="((Student)_editContext.Model).Id"></TelerikNumericTextBox>
+            </div>
+        }
+
+        <div class="form-group row">
+            <label class="col-3" for="name">Name</label>
+            <TelerikTextBox Id="name" @bind-Value="((Student)_editContext.Model).Name" Class="col-5"></TelerikTextBox>
+        </div>
+        <div class="form-group row">
+            <label for="age" class="col-3">Age</label>
+            <TelerikNumericTextBox Id="age" @bind-Value="((Student)_editContext.Model).Age" Class="col-5"></TelerikNumericTextBox>
+        </div>
+
+
+
+        <TelerikButton Enabled="_allowSubmit" Primary="true">Submit</TelerikButton>
+        <TelerikButton OnClick="Cancel" Class="ml-2" ButtonType="ButtonType.Reset">Cancel</TelerikButton>
+    </EditForm>
+
+        }
+
+
+
+    </WindowContent>
+    <WindowActions>
+        <WindowAction Name="Minimize"></WindowAction>
+        <WindowAction Name="Maximize"></WindowAction>
+        <WindowAction Name="Close" OnClick="Close"></WindowAction>
+    </WindowActions>
+</TelerikWindow>
+
+@using CRUDWithModeAndModals.Data 
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+    [Parameter]
+    public ModalMode ModalMode { get; set; }
+    [Parameter]
+    public EventCallback NotifyClose { get; set; }
+    [Parameter]
+    public EventCallback<int[]> NotifyDelete { get; set; }
+    [Parameter]
+    public EventCallback<Student> NotifyCreate { get; set; }
+    [Parameter]
+    public EventCallback<Dictionary<int, Student>> NotifyUpdate { get; set; }
+    [Parameter]
+    public  List<Student> SelectedStudents { get; set; }
+    public EditContext _editContext { get; set; }
+    public Student  Model { get; set; }
+    public string Title { get; set; }
+    private bool _allowSubmit { get; set; }
+    public int Id { get; set; }
+
+
+    private void Cancel()
+    {
+        Close();
+    }
+
+    private void Delete()
+    {
+        int[] idsToDelete = SelectedStudents.Select(i => i.Id).ToArray();
+        NotifyDelete.InvokeAsync(idsToDelete);
+        Close();
+    }
+
+
+    private void HandelValidSubmit()
+    {
+        if (_editContext.Validate())
+        {
+            switch (ModalMode)
+            {
+
+                case ModalMode.Update:
+                    Update();
+                    break;
+                case ModalMode.Create:
+                    Create();
+                    break;
+            }
+        }
+
+    }
+
+    private void Update()
+    {
+        Dictionary<int, Student> student = new();
+        student.Add(Id, Model);
+        NotifyUpdate.InvokeAsync(student);
+        Close();
+    }
+
+    private void Create()
+    {
+
+        NotifyCreate.InvokeAsync(Model);
+        Close();
+    }
+
+
+    private async void Close()
+    {
+        await NotifyClose.InvokeAsync();
+    }
+
+    protected override Task OnParametersSetAsync()
+    {
+        SetTitle();
+        SetEditContext();
+        return base.OnParametersSetAsync();
+    }
+
+    private void SetTitle()
+    {
+        switch (ModalMode)
+        {
+            case ModalMode.Update:
+                Title = "Update student";
+                break;
+            case ModalMode.Delete:
+                Title = "Delete student";
+                break;
+            case ModalMode.Create:
+                Title = "Create student";
+                break;
+        }
+    }
+
+    private void SetEditContext()
+    {
+        Model = new Student();
+        if (ModalMode==ModalMode.Update)
+        {
+            Model = SelectedStudents.First();
+            Id = Model.Id;
+        }
+        _editContext = new EditContext(Model);
+        _editContext.AddDataAnnotationsValidation();
+        _editContext.OnFieldChanged += HandelFieldChange;
+
+    }
+
+    private void HandelFieldChange(object sender, FieldChangedEventArgs e)
+    {
+        _allowSubmit = _editContext.Validate();
+    }
+}
