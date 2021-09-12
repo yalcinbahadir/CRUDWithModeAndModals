@@ -74,7 +74,7 @@
     public string Title { get; set; }
     private bool _allowSubmit { get; set; }
     public int Id { get; set; }
-
+    string test;
 
     private void Cancel()
     {
@@ -109,6 +109,7 @@
 
     private void Update()
     {
+
         Dictionary<int, Student> student = new();
         student.Add(Id, Model);
         NotifyUpdate.InvokeAsync(student);
@@ -137,6 +138,7 @@
 
     private void SetTitle()
     {
+
         switch (ModalMode)
         {
             case ModalMode.Update:
